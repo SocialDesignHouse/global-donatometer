@@ -37,7 +37,6 @@
 
 			//our plug-in activation
 			public function activate() {
-				$this->log('activated');
 				//call methods to initialize plug-in functionality
 				$this->set_options();
 				$this->add_caps();
@@ -45,7 +44,6 @@
 
 			//our plug-in deactivation
 			public function deactivate() {
-				$this->log('deactivated');
 				//call method to remove capabilities
 				//we don't remove the options here, they are removed in uninstall.php
 				$this->remove_caps();
@@ -146,26 +144,23 @@
 					}
 
 					//build widget body
-					$body .= '<div id="donatometer_widget">' .
-							'<label for="donatometer_success">Success Message (optional): ' . 
-								'<input type="text" name="success" id="donatometer_success" value="' . $this->donatometer['success'] . '" />' .
-							'</label><br />' .
-							'<label for="donatometer_goal">Goal: $' . 
-								'<input type="text" name="goal" id="donatometer_goal" value="' . $this->donatometer['goal'] . '" />' .
-							'</label><br />' .
-							'<label for="donatometer_amount">Raised: $' . 
-								'<input type="text" name="amount" id="donatometer_amount" value="' . $this->donatometer['amount'] . '" />' .
-							'</label><br />' .
-							'<label for="donatometer_start">Starts: ' .
+					$body = '<div id="donatometer_widget">' .
+							'<label for="donatometer_goal">Goal<br />' .
+								'$<input type="text" name="goal" id="donatometer_goal" value="' . $this->donatometer['goal'] . '" />' .
+							'</label><br /><br /><br />' .
+							'<label for="donatometer_amount">Raised<br />' .
+								'$<input type="text" name="amount" id="donatometer_amount" value="' . $this->donatometer['amount'] . '" />' .
+							'</label><br /><br />' .
+							'<label for="donatometer_start">Starts<br />' .
 								'<input type="date" name="start_date" id="donatometer_start" value="' . $this->donatometer['start_date'] . '" />' .
-							'</label><br />' .
-							'<label for="donatometer_end">Ends: ' .
+							'</label><br /><br />' .
+							'<label for="donatometer_end">Ends<br />' .
 								'<input type="date" name="end_date" id="donatometer_end" value="' . $this->donatometer['end_date'] . '" />' .
-							'</label><br />' .
+							'</label><br /><br />' .
 							'<label for="donatometer_active">' .
 								'<input type="checkbox" name="active" id="donatometer_active" value="1"' . $active . ' />' .
 								' Active' .
-							'</label><br />' .
+							'</label>' .
 							'<input type="hidden" name="last_update" value="' . date('Y-m-d') . '" />' .
 							'<input type="hidden" name="donatometer_save" value="1" />' .
 						'</div>'
@@ -181,13 +176,13 @@
 
 			//add donatometer admin page
 			public function admin_page() {
-				add_theme_page('Donatometer', 'Donatometer', $this->options->caps['manage_options'][1], $this->fix_name('display'), array($this, 'create_page'));
+				add_theme_page('Donatometer', 'Donatometer', $this->options->caps['manage_options'][1], $this->fix_name('display'), array($this, 'display_page'));
 			}
 
 			//create donatometer admin page
 			public function display_page() {
 				//if form was submitted and user can edit the donatometer display options
-				if($_REQUEST['submit'] && current_user_can($this->options->caps['manage_options'][1])) {
+				if(isset($_REQUEST['donatometer_submit']) && current_user_can($this->options->caps['manage_options'][1])) {
 					//save display options
 					$this->save_admin($_REQUEST);
 				}
@@ -199,6 +194,13 @@
 					$css_active = '';
 				}
 
+				//see if we should check the tickmarks checkbox
+				if($this->display['tickmarks']) {
+					$tickmarks_active = ' checked';
+				} else {
+					$tickmarks_active = '';
+				}
+
 				//array for position choices
 				$position_options = array(
 					'none' => 'Do not add position class',
@@ -206,15 +208,18 @@
 					'top' => 'Fix to Top - Adds class "top" to template'
 				);
 
+				//array for page choices
+				$show_options = array(
+					'none' => 'I will add the Donatometer manually',
+					'home' => 'Add the Donatometer to my homepage',
+					'all' => 'Add the Donatometer to every page'
+				);
+
 				//build page body
-				$body .= '<div id="donatometer_page" class="wrap">' .
+				$body = '<div id="donatometer_page" class="wrap">' .
 						'<h2>Donatometer Display Options</h2>' .
 						'<form id="donatometer_admin_form" method="post">' .
-							'<label for="donatometer_css">CSS<br />' .
-								'<input type="checkbox" id="donatometer_css" name="css" value="1"' . $css_active . ' />' .
-								' Embed Donatometer Default CSS' .
-							'</label><br />' .
-							'<label for="donatometer_position">' .
+							'<label for="donatometer_position">Donatomter Position<br />' .
 								'<select name="position" id="donatometer_position">';
 
 									//iterate through position choices and populate dropdown
@@ -232,13 +237,41 @@
 
 								//build rest of body
 								$body .= '</select>' .
-							'</label><br />' .
-							'<label for="donatometer_success_template">' .
-								'<input type="text" name="success_template" id="donatometer_success_template" value="' . $this->display['success_template'] . '" />' .
-							'</label><br />' .
-							'<label for="donatometer_raised_template">' .
-								'<inpyt type="text" name="success_template" id="donatomter_raised_template" value="' . $this->display['raised_template'] . '" />' .
 							'</label><br /><br />' .
+							'<label for="donatometer_show">Add Donatomter to Site<br />' .
+								'<select name="show" id="donatometer_show">';
+
+									//iterate through page choices and populate dropdown
+									foreach($show_options as $val => $label) {
+										//check for selected position
+										if($val == $this->display['show']) {
+											$selected = ' selected';
+										} else {
+											$selected = '';
+										}
+
+										//add position to dropdown
+										$body .= '<option value="' . $val . '"' . $selected . '>' . $label . '</label>';
+									}
+
+								//build rest of body
+								$body .= '</select>' .
+							'</label><br /><br />' .
+							'<label for="donatometer_success_template">Success Template<br />' .
+								'<input type="text" name="success_template" id="donatometer_success_template" value="' . $this->display['success_template'] . '" />' .
+							'</label><br /><br />' .
+							'<label for="donatometer_raised_template">Raised Template<br />' .
+								'<input type="text" name="raised_template" id="donatomter_raised_template" value="' . $this->display['raised_template'] . '" />' .
+							'</label><br /><br />' .
+							'<label for="donatometer_css">' .
+								'<input type="checkbox" id="donatometer_css" name="css" value="1"' . $css_active . ' />' .
+								' Embed Donatometer Default CSS' .
+							'</label><br /><br />' .
+							'<label for="donatometer_tickmarks">' .
+								'<input type="checkbox" id="donatometer_tickmarks" name="tickmarks" value="1"' . $tickmarks_active . ' />' .
+								' Add tickmarks to progress bar' .
+							'</label><br /><br />' .
+							'<input type="hidden" name="donatometer_submit" value="1" />' .
 							'<input type="submit" id="donatometer_submit" name="submit" value="Save Settings" />' .
 						'</form>' .
 					'</div>'
@@ -251,7 +284,9 @@
 			//save settings from the admin display page
 			private function save_admin($vals) {
 				//remove submit from fields
+				unset($vals['donatometer_submit']);
 				unset($vals['submit']);
+				unset($vals['page']);
 
 				//iterate through values and update $this->display
 				foreach($vals as $name => $val) {
@@ -270,12 +305,12 @@
 					//if we should embed donatometer css
 					if($this->display['css']) {
 						//register and enqueue donatometer css
-						wp_register_style('donatometer', DONATOMETER_URL . '/assets/css/donatometer.css', '', $this->options->opts[$this->fix_name('version')], 'screen');
+						wp_register_style('donatometer', SOCIAL_DONATOMETER_URL . '/assets/css/donatometer.css', '', $this->options->opts[$this->fix_name('version')], 'screen');
 						wp_enqueue_style('donatometer');
 					}
 
 					//register and enqueue donatomter js
-					wp_register_script('donatometer', DONATOMETER_URL . '/assets/js/donatometer.min.js', array('jquery'), $this->options->opts[$this->fix_name('version')], true);
+					wp_register_script('donatometer', SOCIAL_DONATOMETER_URL . '/assets/js/donatometer.min.js', array('jquery'), $this->options->opts[$this->fix_name('version')], true);
 					wp_enqueue_script('donatometer');
 				}
 			}
@@ -293,13 +328,17 @@
 			private function check() {
 				//if the donatometer is active
 				if($this->donatometer['active']) {
+					$this->log('active');
 					//check page display and date
 					if($this->check_page() && $this->check_date()) {
 						return true;
 					} else {
+						$this->log('page: ' . $this->check_page());
+						$this->log('date: ' . $this->check_date());
 						return false;
 					}
 				} else {
+					$this->log($this->donatometer);
 					return false;
 				}
 			}
@@ -357,11 +396,11 @@
 
 					//if we need to check both
 					if($check_start && $check_end) {
-						//if today is after the start date and before the end date  
-						if($start >= $today && $today <= $end) {
-							return false;
-						} else {
+						//if today is after the start date or after the end date  
+						if($today >= $start && $today <= $end) {
 							return true;
+						} else {
+							return false;
 						}
 					//if we only need to check the end date
 					} elseif($check_end && $check_start == false) {
@@ -388,55 +427,56 @@
 
 			//get donatometer template
 			private function get_template() {
-				//make sure donatometer is active
-				if($this->donatometer['active']) {
-					//format the %tags% in the display options
-					$this->format_tags();
+				//format the %tags% in the display options
+				$this->format_tags();
 
-					//check for donatometer button to know if we need to add the no-button class to our progress bar
-					if($this->donatometer['link'] && $this->donatometer['button']) {
-						//showing button
-						$show_button = true;
-						$progrss_class = '';
-					} else {
-						//not showing button
-						$show_button = false;
-						$progress_class = ' no-button';
-					}
+				//check for donatometer button to know if we need to add the no-button class to our progress bar
+				if($this->donatometer['link'] && $this->donatometer['button']) {
+					//showing button
+					$show_button = true;
+					$progress_class = '';
+				} else {
+					//not showing button
+					$show_button = false;
+					$progress_class = ' no-button';
+				}
 
-					//check for display position setting
-					if($this->display['position'] != 'none') {
-						$position = ' ' . $this->display['position'];
-					} else {
-						$position = '';
-					}
+				//check for display position setting
+				if($this->display['position'] != 'none') {
+					$position = ' ' . $this->display['position'];
+				} else {
+					$position = '';
+				}
 
-					//build the donatometer HTML
-					$body = '<div id="social-donatometer" class="donatometer-container' . $position . '">' .
+				//build the donatometer HTML
+				$body = '<div id="social-donatometer" class="donatometer-container' . $position . '">' .
 						'<div class="donatometer">' .
 							'<div class="progress-bar' . $progress_class . '">' .
 								'<p class="progress" data-goal="' . $this->donatometer['goal'] . '" data-amount="' . $this->donatometer['amount'] . '" data-success="' . $this->display['success_template'] . '"></p>' .
-								'<p class="progress-msg">' . $this->display['raised_template'] . '</p>' .
-							'</div>'
-					;
+								'<p class="progress-msg">' . $this->display['raised_template'] . '</p>';
 
-					//if there is a donatometer button
-					if($show_button) {
-						//add the donatometer markup to the template body
-						$body .= '<div class="donatometer-button">' .
-								'<a href="' . $this->donatometer['link'] . '">' . $this->donatometer['button'] . '</a>' .
-							'</div>'
-						;
-					}
+								if($this->display['tickmarks']) {
+									$body .= '<div class="tickmarks"></div>';
+								}
 
-					//close out the template body
-					$body .= '</div>' .
-						'</div>'
-					;
+							$body .= '</div>';
 
-					//return template
-					return $body;
-				}
+							//if there is a donatometer button
+							if($show_button) {
+								//add the donatometer markup to the template body
+								$body .= '<div class="donatometer-button">' .
+										'<a href="' . $this->donatometer['link'] . '">' . $this->donatometer['button'] . '</a>' .
+									'</div>'
+								;
+							}
+
+						//close out the template body
+						$body .= '</div>' .
+					'</div>'
+				;
+
+				//return template
+				return $body;
 			}
 
 		//FORMAT TEMPLATE TAGS
@@ -445,8 +485,8 @@
 			private function format_tags() {
 				//these are the templates we need to check
 				$format_array = array(
-					$this->display['raised_template'],
-					$this->display['success_template']
+					'raised_template' => $this->display['raised_template'],
+					'success_template' => $this->display['success_template']
 				);
 
 				//these are the various pre-defined tags, aside from the date tags which we will deal with later
@@ -461,14 +501,14 @@
 					'%goal_dec%' => number_format($this->donatometer['goal'], 2, '.', ','),
 					'%goal_eu_format' => number_format($this->donatometer['goal'], 0, ',', '.'),
 					'%goal_eu_dec%' => number_format($this->donatometer['goal'], 2, ',', '.'),
-					'%days_left%' => $this->days_left($this->donatometer['end_date'])
+					'%days_left%' => $this->get_days_left($this->donatometer['end_date'])
 				);
 
 				//iterate through templates to format
-				foreach($format_array as $key => &$val) {
+				foreach($format_array as $setting => &$val) {
 					//check for date tags and replace them with the specified format
-					$val = preg_replace_calback(
-						'\%end.*\%|\%start.*\%',
+					$val = preg_replace_callback(
+						'#\%end.*\%|\%start.*\%#',
 						function($dates) {
 							//iterate through matched date tags
 							foreach($dates as $key => $format) {
@@ -497,10 +537,12 @@
 					);
 
 					//iterate through tags array
-					foreach($tags_array as $tag => $replace) {
+					foreach($tags_array as $tag => &$replace) {
 						//replace any tags found with their match
 						$val = str_replace($tag, $replace, $val);
 					}
+
+					$this->display[$setting] = $val;
 				}
 			}
 
@@ -581,9 +623,31 @@
 			private function set_options() {
 				//iterate through our options
 				foreach($this->options->opts as $name => $val) {
+					//if this is our options array
 					if($name == $this->fix_name('options')) {
+						//iterate through each value
+						foreach($val as $key => $value) {
+							//check it against the current settings
+							if($this->donatometer[$key] != $value) {
+								//if the setting was different, store the current setting, not our default
+								$val[$key] = $this->donatometer[$key];
+							}
+						}
+
+						//json encode our options array into a string
 						$val = json_encode($val);
+					//if this is our display array
+					} elseif($name == $this->fix_name('display')) {
+						//iterate through each value
+						foreach($val as $key => $value) {
+							//check it against the current settings
+							if($this->display[$key] != $value) {
+								//if the setting was different, store the current setting, not our default
+								$val[$key] = $this->display[$key];
+							}
+						}
 					}
+
 					//run the option through our update method
 					$this->update_option($name, $val);
 				}

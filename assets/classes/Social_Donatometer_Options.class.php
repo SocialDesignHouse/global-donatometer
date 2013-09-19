@@ -35,7 +35,6 @@
 						'end_date' => '0000-00-00',
 						'success' => 'Thanks for your support!',
 						'active' => 0,
-						'show' => 'none',
 						'last_update' => 0000-00-00,
 						'link' => '/donate/',
 						'button' => 'Donate'
@@ -43,8 +42,10 @@
 					$this->prefix . 'display' => array(
 						'css' => 1,
 						'position' => 'bottom',
-						'raised_template' => '$%amount% of $%raised% goal',
-						'success_template' => 'Thanks to your support we raised %amount%!'
+						'raised_template' => '$%raised_format% of $%goal_format% goal',
+						'success_template' => 'Thanks to your support we raised %raised_format%!',
+						'show' => 'none',
+						'tickmarks' => 0
 					)
 				);
 			}
