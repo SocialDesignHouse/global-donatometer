@@ -23,7 +23,7 @@ License: MIT
 
 	//this is the url to the plug-in's directory
 	if(!defined("SOCIAL_DONATOMETER_URL")) {
-		define("SOCIAL_DONATOMETER_URL", WP_PLUGIN_URL . '/' . DONATOMETER);
+		define("SOCIAL_DONATOMETER_URL", WP_PLUGIN_URL . '/' . SOCIAL_DONATOMETER);
 	}
 
 	// CLASSES
@@ -31,19 +31,17 @@ License: MIT
 	//options
 	include_once(SOCIAL_DONATOMETER_DIR . '/assets/classes/Social_Donatometer_Options.class.php');
 	//logic
-	include_once(SOCIAL_DONATOMETER_DIR . '/assets/classes/Social_Donatomter.class.php');
+	include_once(SOCIAL_DONATOMETER_DIR . '/assets/classes/Social_Donatometer.class.php');
 
 	//if classes exist
 	if(class_exists('Social_Donatometer_Options') && class_exists('Social_Donatometer')) {
-		$plugin_options = new Social_Donatometer_Options();
+		$donatometer_options = new Social_Donatometer_Options();
 
-		$plugin = new Social_Donatometer($plugin_options);
+		$donatometer = new Social_Donatometer($donatometer_options);
 
-		register_activation_hook(__FILE__, array($plugin, 'activate'));
+		register_activation_hook(__FILE__, array($donatometer, 'activate'));
 
-		register_deactivation_hook(__FILE__, array($plugin, 'deactivate'));
-
-		register_uninstall_hook(__FILE__, array($plugin, 'uninstall'));
+		register_deactivation_hook(__FILE__, array($donatometer, 'deactivate'));
 
 		add_action('wp_dashboard_setup', array($donatometer, 'widget'));
 

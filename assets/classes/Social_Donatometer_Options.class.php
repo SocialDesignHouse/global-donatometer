@@ -19,7 +19,7 @@
 			public $caps;
 
 			//initialize options
-			protected function __construct() {
+			public function __construct() {
 				$this->set_options();
 				$this->set_capabilities();
 			}
@@ -63,5 +63,3 @@
 		}
 
 	}
-
-?>

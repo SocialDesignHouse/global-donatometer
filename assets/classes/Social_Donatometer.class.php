@@ -37,6 +37,7 @@
 
 			//our plug-in activation
 			public function activate() {
+				$this->log('activated');
 				//call methods to initialize plug-in functionality
 				$this->set_options();
 				$this->add_caps();
@@ -44,14 +45,15 @@
 
 			//our plug-in deactivation
 			public function deactivate() {
-				//call methods to remove options and capabilities
-				//we don't remove the tables here, they are removed in uninstall.php
+				$this->log('deactivated');
+				//call method to remove capabilities
+				//we don't remove the options here, they are removed in uninstall.php
 				$this->remove_caps();
 			}
 
 			//our plug-in uninstall
 			public function uninstall() {
-				//call methods to remove tables and unset version number
+				//call method to remove options
 				//other plugin data should have been removed on deactivation
 				$this->unset_options();
 			}
@@ -64,13 +66,21 @@
 				$opts = get_option($this->fix_name('options'), $this->options->opts[$this->fix_name('options')]);
 
 				//decode the JSON string into an array and save it to $this->donatometer
-				$this->donatometer = json_decode($opts, true);
+				if(is_string($opts)) {
+					$this->donatometer = json_decode($opts, true);
+				} else {
+					$this->donatometer = $opts;
+				}
 
 				//get display, use defaults from plugin-options.php if they aren't found
 				$display = get_option($this->fix_name('display'), $this->options->opts[$this->fix_name('display')]);
 
 				//decode teh JSON string into an array and save it over to $this->display
-				$this->display = json_decode($display, true);
+				if(is_string($display)) {
+					$this->display = json_decode($display, true);
+				} else {
+					$this->display = $display;
+				}
 			}
 
 		//DASHBOARD WIDGET
@@ -84,7 +94,7 @@
 			public function widget_scripts($page) {
 				if($page == 'index.php') {
 					wp_register_script('modernizr-input', SOCIAL_DONATOMETER_URL . '/assets/js/modernizr.min.js', '', '', true);
-					wp_register_script('donatometer-js', SOCIAL_DONATOMETER_URL . '/assets/js/widget.min.js', array('jquery', 'modernizr-input'), $this->options->opts[$this->prefix . 'version'], true);
+					wp_register_script('donatometer-js', SOCIAL_DONATOMETER_URL . '/assets/js/widget.min.js', array('jquery', 'modernizr-input'), $this->options->opts[$this->fix_name('version')], true);
 
 					wp_enqueue_script('donatometer-js');
 				}
@@ -92,7 +102,7 @@
 
 			//create the default widget
 			public function create_widget() {
-				if($donatometer['active']) {
+				if($this->donatometer['active']) {
 					$body = '<p>We have raised <strong>$' . $this->donatometer['amount'] . '</strong> of our <strong>$' . $this->donatometer['goal'] . '</strong> goal with <strong>' . $this->get_days_left($this->donatometer['end_date'], date('Y-m-d')) . ' days</strong> to go.</p>' .
 						'<br /><br />' .
 						'<p>Last Updated: ' . date('M d, Y', strtotime($this->donatometer['last_update'])) . '</p>'
@@ -177,7 +187,7 @@
 			//create donatometer admin page
 			public function display_page() {
 				//if form was submitted and user can edit the donatometer display options
-				if($_REQUEST['submit'] && current_user_can($this->options->caps['manage_options'][1]) {
+				if($_REQUEST['submit'] && current_user_can($this->options->caps['manage_options'][1])) {
 					//save display options
 					$this->save_admin($_REQUEST);
 				}
@@ -191,7 +201,7 @@
 
 				//array for position choices
 				$position_options = array(
-					'none' => 'Do not add position class'
+					'none' => 'Do not add position class',
 					'bottom' => 'Fix to Bottom - Adds class "bottom" to template',
 					'top' => 'Fix to Top - Adds class "top" to template'
 				);
@@ -260,12 +270,12 @@
 					//if we should embed donatometer css
 					if($this->display['css']) {
 						//register and enqueue donatometer css
-						wp_register_style('donatometer', DONATOMETER_URL . '/assets/css/donatometer.css', '', $this->options->opts[$this->prefix . 'version'], 'screen');
+						wp_register_style('donatometer', DONATOMETER_URL . '/assets/css/donatometer.css', '', $this->options->opts[$this->fix_name('version')], 'screen');
 						wp_enqueue_style('donatometer');
 					}
 
 					//register and enqueue donatomter js
-					wp_register_script('donatometer', DONATOMETER_URL . '/assets/js/donatometer.min.js', array('jquery'), $this->options->opts[$this->prefix . 'version'], true);
+					wp_register_script('donatometer', DONATOMETER_URL . '/assets/js/donatometer.min.js', array('jquery'), $this->options->opts[$this->fix_name('version')], true);
 					wp_enqueue_script('donatometer');
 				}
 			}
@@ -295,7 +305,7 @@
 			}
 
 			//check if this is the correct page to display the donatometer
-			private function check_page($donatometer) {
+			private function check_page() {
 				//check the display['show'] option
 				switch($this->display['show']) {
 					//if show is set to homepage
@@ -318,7 +328,7 @@
 			}
 
 			//check if the date falls within the donatometers display dates
-			private function check_date($donatometer) {
+			private function check_date() {
 				//don't check dates by default
 				$check_start = false;
 				$check_end = false;
@@ -327,8 +337,8 @@
 				$default_date = strtotime(date('Y-m-d', strtotime('0000-00-00')));
 
 				//set times for start and end
-				$end = strtotime($donatometer['end_date']);
-				$start = strtotime($donatometer['start_date']);
+				$end = strtotime($this->donatometer['end_date']);
+				$start = strtotime($this->donatometer['start_date']);
 
 				//see if we need to check start date
 				if($start != $default_date) {
@@ -583,12 +593,8 @@
 			public function unset_options() {
 				//iterate through our options
 				foreach($this->options->opts as $name => $val) {
-					//don't remove the version number so we can still check versions on updates
-					//we'll remove it in uninstall.php
-					if($name != $this->fix_name('version')) {
-						//remove the option
-						delete_option($name);
-					}
+					//remove the option
+					delete_option($name);
 				}
 			}
 
@@ -664,13 +670,13 @@
 				//see if short_name was provided
 				if(isset($short_name)) {
 					//if short_name doesn't start with _ and prefix doesn't end with _
-					if(substr(0, -1, $this->options->prefix) != '_' && substr(0, 1, $short_name) != '_') {
+					if(substr($this->options->prefix, -1, 1) != '_' && substr($short_name, 0, 1) != '_') {
 						//add an _ between prefix and short_name
 						$name = $this->options->prefix . '_' . $short_name;
 					//if short_name starts with _ and prefix ends with _
-					} elseif(substr(0, -1, $this->options->prefix) == '_' && substr(0, 1, $short_name) == '_') {
+					} elseif(substr($this->options->prefix, -1, 1) == '_' && substr($short_name, 0, 1) == '_') {
 						//remove _ from short_name and prepend prefix
-						$name = $this->options->prefix . substr(0, 1, $short_name);
+						$name = $this->options->prefix . substr($short_name, 0, 1);
 					//if only one has an _
 					} else {
 						//concatenate the prefix and short_name
